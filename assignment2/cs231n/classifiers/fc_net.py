@@ -205,8 +205,18 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zeros.                               #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        last_output_dim = input_dim
+        for i in range(self.num_layers-1):
+            self.params[f"W{i+1}"] = np.random.normal(0, weight_scale, (last_output_dim, hidden_dims[i]))
+            self.params[f"b{i+1}"] =  np.zeros(hidden_dims[i])
+            if normalization == "batchnorm":
+                self.params[f"gamma{i+1}"] = np.ones((hidden_dims, 1))
+                self.params[f"beta{i+1}"] = np.zeros((hidden_dims, 1))
+            last_output_dim = hidden_dims[i]
+        self.params[f"W{self.num_layers}"] = np.random.normal(0, weight_scale, (last_output_dim, num_classes))
+        self.params[f"b{self.num_layers}"] = np.zeros(num_classes)
 
-        pass
+        
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -267,8 +277,28 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        in_data = X
+        caches = []
+        for i in range(1, self.num_layers):
+            out, cache = affine_forward(in_data, self.params["W"+str(i)], self.params["b"+str(i)])
+            caches.append(cache)
+            in_data = out
+            if self.normalization is not None:
+                pass
+            
+            out, cache = relu_forward(out)
+            caches.append(cache)
+            in_data = out
+            
+            if self.use_dropout:
+                pass
+            
+        scores, cache = affine_forward(in_data, self.params["W"+str(self.num_layers)], self.params["b"+str(self.num_layers)])
+        caches.append(cache)
 
-        pass
+            
+
+            
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -295,7 +325,25 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        loss, grad = softmax_loss(scores, y)
+        loss += 0.5* self.reg * (np.sum(self.params["W"+ str(self.num_layers)]* self.params["W"+ str(self.num_layers)])+np.sum(self.params["b"+ str(self.num_layers)]* self.params["b"+ str(self.num_layers)]))
+        dx, dw, db = affine_backward(grad, caches[-1])
+        grads["W"+str(self.num_layers)] =  dw + self.reg* self.params["W"+ str(self.num_layers)]
+        grads["b"+str(self.num_layers)] = db + self.reg*self.params["b"+ str(self.num_layers)]
+        
+        l = len(caches)-2
+        for i in range(self.num_layers-1, 0, -1):
+            if self.use_dropout:
+                pass
+            dx = relu_backward(dx, caches[l]) #relu
+            l-=1
+            if self.normalization is not None:
+              pass
+            dx, dw, db = affine_backward(dx, caches[l])
+            l-=1
+            grads["W"+str(i)] = dw + self.reg* self.params["W"+ str(i)]
+            grads["b"+str(i)] = db + self.reg* self.params["b"+ str(i)]
+            loss += 0.5* self.reg * (np.sum(self.params["W"+ str(i)]* self.params["W"+ str(i)])+np.sum(self.params["b"+ str(i)]* self.params["b"+ str(i)]))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
